@@ -210,12 +210,14 @@ local function checkPlayerInDatabase(playerId, playerName, source)
                 rewardData = rewardType .. ": " .. tostring(rewardValue)
             end
             
-            -- Update database
+            -- Update database with reward info
+            -- reward: Stores description for audit log (e.g., "money: 1500" or "anchovy: 3")
+            -- flag: Login streak counter - starts at 1, increments on each claim
             MySQL.Async.execute('INSERT INTO player_reward (id, name, reward, flag, date) VALUES (@id, @name, @reward, @flag, NOW()) ON DUPLICATE KEY UPDATE reward = @reward, date = NOW(), flag = flag + 1', {
                 ['@id'] = playerId,
                 ['@name'] = playerName,
                 ['@reward'] = rewardData,
-                ['@flag'] = 1 -- Initial value for new records (SQL increments existing records)
+                ['@flag'] = 1 -- Initial value for new players (SQL auto-increments for returning players)
             }, function(rowsChanged)
                 -- Release lock after completion
                 playerLocks[playerId] = nil

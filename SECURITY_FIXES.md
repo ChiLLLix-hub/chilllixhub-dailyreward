@@ -61,8 +61,11 @@ reward VARCHAR(255),
 - Logs all errors for debugging
 
 ### 7. ✅ Fix Misleading Comments (FIXED)
-- Updated comment on flag field from "for checking and detecting inject" to "Initial value for new records (SQL increments existing records)"
+- Updated comment on flag field from "for checking and detecting inject" to "Initial value for new players (SQL auto-increments for returning players)"
 - Added descriptive comments throughout the code
+- Created comprehensive database documentation (see DATABASE_SCHEMA.md)
+- The `reward` column stores audit logs of what was given (e.g., "money: 1500")
+- The `flag` column tracks login streaks / total claims (incremented on each reward)
 
 ### 8. ✅ Input Validation (IMPLEMENTED)
 - Validates player object exists before accessing properties
