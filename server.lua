@@ -137,11 +137,11 @@ local function getTimeUntilNextReward(lastRewardDate)
             sec = 0
         })
         
-        -- Get UTC offset
-        local utcOffset = os.difftime(os.time(os.date("*t", currentTime)), os.time(os.date("!*t", currentTime)))
+        -- Get UTC offset (UTC time - local time)
+        local utcOffset = os.difftime(os.time(os.date("!*t", currentTime)), os.time(os.date("*t", currentTime)))
         
-        -- Calculate next midnight in UTC (adjusted for local time)
-        nextMidnight = utcMidnightToday + 86400 - utcOffset
+        -- Calculate next midnight in UTC (adjusted for local server time)
+        nextMidnight = utcMidnightToday + 86400 + utcOffset
     else
         -- Use local time
         local now = os.date('*t', currentTime)
