@@ -124,24 +124,19 @@ local function getTimeUntilNextReward(lastRewardDate)
     local nextMidnight
     
     if Config.UseUTC then
-        -- Get current UTC time
+        -- Get current time in UTC
         local utcNow = os.date('!*t', currentTime)
         
-        -- Calculate next UTC midnight (in UTC time)
-        local utcMidnightToday = os.time({
-            year = utcNow.year,
-            month = utcNow.month,
-            day = utcNow.day,
-            hour = 0,
-            min = 0,
-            sec = 0
-        })
+        -- Check if we're past midnight UTC today
+        local secondsSinceMidnight = utcNow.hour * 3600 + utcNow.min * 60 + utcNow.sec
         
-        -- Get UTC offset (UTC time - local time)
-        local utcOffset = os.difftime(os.time(os.date("!*t", currentTime)), os.time(os.date("*t", currentTime)))
-        
-        -- Calculate next midnight in UTC (adjusted for local server time)
-        nextMidnight = utcMidnightToday + 86400 + utcOffset
+        -- Calculate seconds until next UTC midnight
+        if secondsSinceMidnight > 0 then
+            nextMidnight = currentTime + (86400 - secondsSinceMidnight)
+        else
+            -- Already at UTC midnight
+            nextMidnight = currentTime + 86400
+        end
     else
         -- Use local time
         local now = os.date('*t', currentTime)
@@ -301,7 +296,7 @@ CreateThread(function()
         
         -- Clean up stuck locks (older than configured timeout)
         for playerId, lockTime in pairs(playerLocks) do
-            if type(lockTime) == 'number' and currentTime - lockTime > lockTimeout then
+            if currentTime - lockTime > lockTimeout then
                 playerLocks[playerId] = nil
                 logEvent(playerId, nil, 'WARNING', 'Cleared stuck lock after '..lockTimeout..' seconds')
             end
