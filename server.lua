@@ -1,6 +1,10 @@
 
 local QBCore = exports['qb-core']:GetCoreObject()
 
+-- Default values (used as fallbacks if Config is missing values)
+local DEFAULT_RATE_LIMIT = 5  -- seconds
+local DEFAULT_LOCK_TIMEOUT = 60  -- seconds
+
 -- Rate limiting and race condition protection
 local playerCooldowns = {} -- Track last request time per player
 local playerLocks = {} -- Mutex locks to prevent race conditions
@@ -127,10 +131,12 @@ local function getTimeUntilNextReward(lastRewardDate)
         -- Get current time in UTC
         local utcNow = os.date('!*t', currentTime)
         
-        -- Calculate seconds since UTC midnight
+        -- Calculate seconds since UTC midnight today
         local secondsSinceMidnight = utcNow.hour * 3600 + utcNow.min * 60 + utcNow.sec
         
-        -- Calculate seconds until next UTC midnight
+        -- Calculate timestamp of next UTC midnight
+        -- currentTime is a Unix timestamp (UTC-based), and we subtract seconds elapsed since UTC midnight,
+        -- then add 86400 to get tomorrow's UTC midnight
         nextMidnight = currentTime + (86400 - secondsSinceMidnight)
     else
         -- Use local time
@@ -256,7 +262,7 @@ RegisterNetEvent('login_reward:checkReward', function()
     local currentTime = os.time()
     local lastRequestTime = playerCooldowns[citizenId] or 0
     local timeSinceLastRequest = currentTime - lastRequestTime
-    local rateLimitCooldown = Config.RateLimitCooldown or 5
+    local rateLimitCooldown = Config.RateLimitCooldown or DEFAULT_RATE_LIMIT
     
     if timeSinceLastRequest < rateLimitCooldown then
         local remainingCooldown = rateLimitCooldown - timeSinceLastRequest
@@ -280,7 +286,7 @@ CreateThread(function()
     while true do
         Wait(300000) -- 5 minutes
         local currentTime = os.time()
-        local lockTimeout = Config.LockTimeout or 60
+        local lockTimeout = Config.LockTimeout or DEFAULT_LOCK_TIMEOUT
         
         -- Clean up old cooldowns (older than 1 hour)
         for playerId, timestamp in pairs(playerCooldowns) do
