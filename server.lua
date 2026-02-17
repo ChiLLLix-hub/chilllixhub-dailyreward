@@ -127,16 +127,11 @@ local function getTimeUntilNextReward(lastRewardDate)
         -- Get current time in UTC
         local utcNow = os.date('!*t', currentTime)
         
-        -- Check if we're past midnight UTC today
+        -- Calculate seconds since UTC midnight
         local secondsSinceMidnight = utcNow.hour * 3600 + utcNow.min * 60 + utcNow.sec
         
         -- Calculate seconds until next UTC midnight
-        if secondsSinceMidnight > 0 then
-            nextMidnight = currentTime + (86400 - secondsSinceMidnight)
-        else
-            -- Already at UTC midnight
-            nextMidnight = currentTime + 86400
-        end
+        nextMidnight = currentTime + (86400 - secondsSinceMidnight)
     else
         -- Use local time
         local now = os.date('*t', currentTime)
@@ -214,7 +209,7 @@ local function checkPlayerInDatabase(playerId, playerName, source)
                 ['@id'] = playerId,
                 ['@name'] = playerName,
                 ['@reward'] = rewardData,
-                ['@flag'] = 1 -- Login counter (incremented on each reward claim)
+                ['@flag'] = 1 -- Initial flag value (SQL increments on duplicate key)
             }, function(rowsChanged)
                 -- Release lock after completion
                 playerLocks[playerId] = nil

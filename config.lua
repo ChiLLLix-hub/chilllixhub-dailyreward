@@ -14,7 +14,7 @@ Config.MoneyReward = {
 }
 
 -- Rate limiting configuration (in seconds)
-Config.RateLimitCooldown = 5 -- Minimum time between reward attempts per player
+Config.RateLimitCooldown = 5 -- Minimum time between reward check requests (rate limit) per player
 
 -- Lock timeout configuration (in seconds)
 Config.LockTimeout = 60 -- Time before a stuck lock is automatically cleared
