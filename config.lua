@@ -12,3 +12,13 @@ Config.MoneyReward = {
     minAmount = 100,
     maxAmount = 1000
 }
+
+-- Rate limiting configuration (in seconds)
+Config.RateLimitCooldown = 5 -- Minimum time between reward attempts per player
+
+-- Timezone configuration (use UTC for consistency)
+Config.UseUTC = true -- Set to true to use UTC timezone for daily reset
+
+-- Logging configuration
+Config.EnableLogging = true -- Enable server-side logging for debugging
+Config.LogExploitAttempts = true -- Log potential exploitation attempts
