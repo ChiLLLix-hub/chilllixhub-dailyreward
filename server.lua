@@ -120,27 +120,50 @@ local function getTimeUntilNextReward(lastRewardDate)
         return 0
     end
     
-    local lastReward, today
+    local currentTime
+    local nextMidnight
     
     if Config.UseUTC then
-        lastReward = os.date('!*t', lastRewardDate)
-        today = os.date('!*t', os.time())
+        -- Get current UTC time
+        currentTime = os.time()
+        local utcNow = os.date('!*t', currentTime)
+        
+        -- Calculate next UTC midnight
+        nextMidnight = os.time({
+            year = utcNow.year,
+            month = utcNow.month,
+            day = utcNow.day,
+            hour = 0,
+            min = 0,
+            sec = 0
+        }) + 86400 -- Add one day
+        
+        -- Adjust for UTC offset
+        local localMidnight = os.time({
+            year = utcNow.year,
+            month = utcNow.month,
+            day = utcNow.day,
+            hour = 0,
+            min = 0,
+            sec = 0
+        })
+        local utcOffset = os.difftime(os.time(os.date("*t", currentTime)), os.time(os.date("!*t", currentTime)))
+        nextMidnight = nextMidnight - utcOffset
     else
-        lastReward = os.date('*t', lastRewardDate)
-        today = os.date('*t', os.time())
+        -- Use local time
+        currentTime = os.time()
+        local now = os.date('*t', currentTime)
+        nextMidnight = os.time({
+            year = now.year,
+            month = now.month,
+            day = now.day,
+            hour = 0,
+            min = 0,
+            sec = 0
+        }) + 86400 -- Add one day
     end
     
-    -- Calculate seconds until midnight
-    local midnight = os.time({
-        year = today.year,
-        month = today.month,
-        day = today.day,
-        hour = 0,
-        min = 0,
-        sec = 0
-    }) + 86400 -- Add one day
-    
-    local secondsUntilMidnight = midnight - os.time()
+    local secondsUntilMidnight = nextMidnight - currentTime
     return math.max(0, secondsUntilMidnight)
 end
 
@@ -160,22 +183,22 @@ local function checkPlayerInDatabase(playerId, playerName, source)
         return
     end
     
-    -- Set lock
-    playerLocks[playerId] = true
+    -- Set lock with timestamp
+    playerLocks[playerId] = os.time()
     
     -- Wrap in pcall for error handling
     local success, err = pcall(function()
         MySQL.Async.fetchScalar('SELECT UNIX_TIMESTAMP(date) FROM player_reward WHERE id = @id', {
             ['@id'] = playerId
         }, function(lastRewardDate)
-            -- Release lock after database operation
-            playerLocks[playerId] = nil
-            
             if not lastRewardDate then
                 logEvent(playerId, playerName, 'INFO', 'First time claiming reward')
             end
             
             if lastRewardDate and not isNextDay(lastRewardDate) then
+                -- Release lock
+                playerLocks[playerId] = nil
+                
                 local timeRemaining = getTimeUntilNextReward(lastRewardDate)
                 local timeFormatted = formatTime(timeRemaining)
                 TriggerClientEvent('QBCore:Notify', source, 'You have already received your reward today. Come back in '..timeFormatted..'!', 'error')
@@ -206,6 +229,9 @@ local function checkPlayerInDatabase(playerId, playerName, source)
                 ['@reward'] = rewardData,
                 ['@flag'] = 1 -- Login counter (incremented on each reward claim)
             }, function(rowsChanged)
+                -- Release lock after completion
+                playerLocks[playerId] = nil
+                
                 if rowsChanged and rowsChanged > 0 then
                     givePlayerReward(playerId, source, rewardType, rewardValue)
                 else
@@ -248,9 +274,10 @@ RegisterNetEvent('login_reward:checkReward', function()
     local currentTime = os.time()
     local lastRequestTime = playerCooldowns[citizenId] or 0
     local timeSinceLastRequest = currentTime - lastRequestTime
+    local rateLimitCooldown = Config.RateLimitCooldown or 5
     
-    if timeSinceLastRequest < (Config.RateLimitCooldown or 5) then
-        local remainingCooldown = (Config.RateLimitCooldown or 5) - timeSinceLastRequest
+    if timeSinceLastRequest < rateLimitCooldown then
+        local remainingCooldown = rateLimitCooldown - timeSinceLastRequest
         TriggerClientEvent('QBCore:Notify', source, 'Please wait '..remainingCooldown..' seconds before trying again.', 'error')
         
         if Config.LogExploitAttempts then
@@ -281,10 +308,7 @@ CreateThread(function()
         
         -- Clean up stuck locks (older than 30 seconds)
         for playerId, lockTime in pairs(playerLocks) do
-            if type(lockTime) == 'boolean' then
-                -- If lock is just a boolean, convert to timestamp
-                playerLocks[playerId] = currentTime
-            elseif type(lockTime) == 'number' and currentTime - lockTime > 30 then
+            if type(lockTime) == 'number' and currentTime - lockTime > 30 then
                 playerLocks[playerId] = nil
                 logEvent(playerId, nil, 'WARNING', 'Cleared stuck lock')
             end
