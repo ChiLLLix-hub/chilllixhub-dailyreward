@@ -209,7 +209,7 @@ local function checkPlayerInDatabase(playerId, playerName, source)
                 ['@id'] = playerId,
                 ['@name'] = playerName,
                 ['@reward'] = rewardData,
-                ['@flag'] = 1 -- Initial flag value (SQL increments on duplicate key)
+                ['@flag'] = 1 -- Initial value for new records (SQL increments existing records)
             }, function(rowsChanged)
                 -- Release lock after completion
                 playerLocks[playerId] = nil

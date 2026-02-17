@@ -60,8 +60,8 @@ reward VARCHAR(255),
 - Validates item existence in QBCore.Shared.Items before giving rewards
 - Logs all errors for debugging
 
-### 7. ✅ Misleading Comments (FIXED)
-- Updated comment on flag field from "for checking and detecting inject" to "Login counter (incremented on each reward claim)"
+### 7. ✅ Fix Misleading Comments (FIXED)
+- Updated comment on flag field from "for checking and detecting inject" to "Initial value for new records (SQL increments existing records)"
 - Added descriptive comments throughout the code
 
 ### 8. ✅ Input Validation (IMPLEMENTED)
