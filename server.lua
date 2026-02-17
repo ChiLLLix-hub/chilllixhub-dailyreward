@@ -120,26 +120,15 @@ local function getTimeUntilNextReward(lastRewardDate)
         return 0
     end
     
-    local currentTime
+    local currentTime = os.time()
     local nextMidnight
     
     if Config.UseUTC then
         -- Get current UTC time
-        currentTime = os.time()
         local utcNow = os.date('!*t', currentTime)
         
-        -- Calculate next UTC midnight
-        nextMidnight = os.time({
-            year = utcNow.year,
-            month = utcNow.month,
-            day = utcNow.day,
-            hour = 0,
-            min = 0,
-            sec = 0
-        }) + 86400 -- Add one day
-        
-        -- Adjust for UTC offset
-        local localMidnight = os.time({
+        -- Calculate next UTC midnight (in UTC time)
+        local utcMidnightToday = os.time({
             year = utcNow.year,
             month = utcNow.month,
             day = utcNow.day,
@@ -147,11 +136,14 @@ local function getTimeUntilNextReward(lastRewardDate)
             min = 0,
             sec = 0
         })
+        
+        -- Get UTC offset
         local utcOffset = os.difftime(os.time(os.date("*t", currentTime)), os.time(os.date("!*t", currentTime)))
-        nextMidnight = nextMidnight - utcOffset
+        
+        -- Calculate next midnight in UTC (adjusted for local time)
+        nextMidnight = utcMidnightToday + 86400 - utcOffset
     else
         -- Use local time
-        currentTime = os.time()
         local now = os.date('*t', currentTime)
         nextMidnight = os.time({
             year = now.year,
@@ -298,6 +290,7 @@ CreateThread(function()
     while true do
         Wait(300000) -- 5 minutes
         local currentTime = os.time()
+        local lockTimeout = Config.LockTimeout or 60
         
         -- Clean up old cooldowns (older than 1 hour)
         for playerId, timestamp in pairs(playerCooldowns) do
@@ -306,11 +299,11 @@ CreateThread(function()
             end
         end
         
-        -- Clean up stuck locks (older than 30 seconds)
+        -- Clean up stuck locks (older than configured timeout)
         for playerId, lockTime in pairs(playerLocks) do
-            if type(lockTime) == 'number' and currentTime - lockTime > 30 then
+            if type(lockTime) == 'number' and currentTime - lockTime > lockTimeout then
                 playerLocks[playerId] = nil
-                logEvent(playerId, nil, 'WARNING', 'Cleared stuck lock')
+                logEvent(playerId, nil, 'WARNING', 'Cleared stuck lock after '..lockTimeout..' seconds')
             end
         end
     end
@@ -318,7 +311,6 @@ end)
 
 -- Validate configuration on resource start
 CreateThread(function()
-    Wait(1000) -- Wait for config to load
     if not validateConfig() then
         print('^1[LoginReward] Resource will not function properly due to configuration errors!^0')
     end

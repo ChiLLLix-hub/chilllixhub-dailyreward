@@ -16,6 +16,9 @@ Config.MoneyReward = {
 -- Rate limiting configuration (in seconds)
 Config.RateLimitCooldown = 5 -- Minimum time between reward attempts per player
 
+-- Lock timeout configuration (in seconds)
+Config.LockTimeout = 60 -- Time before a stuck lock is automatically cleared
+
 -- Timezone configuration (use UTC for consistency)
 Config.UseUTC = true -- Set to true to use UTC timezone for daily reset
 
